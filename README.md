@@ -10,8 +10,6 @@ backdrop, patient Motion-driven animation.
 - [Motion](https://motion.dev) for animation, [Lenis](https://lenis.darkroom.engineering/) for smooth scroll
 - [Three.js](https://threejs.org) for the hero's WebGL iridescent scene
 
-See `CLAUDE.md` for the full project brief and non-negotiable design rules.
-
 ## Develop
 ```
 npm install
