@@ -1,7 +1,7 @@
 # Bora Uner — Portfolio
 
 A single-page developer portfolio built to the **monopo saigon** editorial
-design language (see `DESIGN.md`). Monochrome UI, one iridescent WebGL hero
+design language. Monochrome UI, one iridescent WebGL hero
 backdrop, patient Motion-driven animation.
 
 ## Stack
