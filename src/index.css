@@ -1,0 +1,111 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Colors */
+  --color-obsidian: #000000;
+  --color-paper: #ffffff;
+  --color-felt-gray: #6d6d6d;
+  --color-iridescent-fade: #386194;
+
+  /* Typography — Font Families (Roobert is licensed; using the DESIGN.md
+     Inter substitute until it's provided.) */
+  --font-roobert: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Typography — Scale */
+  --text-heading: 78px;
+  --leading-heading: 1.1;
+  --text-display: 225px;
+  --leading-display: 1.25;
+
+  /* Spacing */
+  --spacing-8: 8px;
+
+  /* Border Radius */
+  --radius-buttons: 75px;
+}
+
+/* The iridescent gradient is media only — never a UI fill — so it lives
+   outside the @theme color namespace as its own gradient token. Used as the
+   #hero fallback background below (visible only if WebGL fails to init);
+   the live backdrop is a WebGL noise field (see IridescentScene.jsx), not
+   this flat CSS gradient. Moss → Teal → Indigo: an earthy green/blue
+   palette. */
+:root {
+  --gradient-iridescent-fade: linear-gradient(90deg, rgb(140, 191, 117), rgb(56, 148, 153) 50%, rgb(56, 97, 148));
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background-color: var(--color-paper);
+  color: var(--color-obsidian);
+  font-family: var(--font-roobert);
+}
+
+#root {
+  min-height: 100svh;
+}
+
+/* Fallback in case WebGL isn't available — IridescentScene's canvas paints
+   over this every frame under normal operation, so it's only ever visible
+   if the scene fails to mount (keeps the hero text from landing on a plain
+   white background, unreadable, in that edge case). */
+#hero {
+  background-image: var(--gradient-iridescent-fade);
+}
+
+/* Hero Display Headline: 225px Roobert weight 400 — DESIGN.md describes it
+   as "breathing" and centered rather than cropped, so (unlike a wordmark
+   meant to overflow) it scales down on narrower viewports to stay whole
+   and legible instead of spilling off the edges. Exact 225px only applies
+   once the viewport is wide enough to hold it comfortably. */
+.text-display {
+  font-family: var(--font-roobert);
+  font-weight: 400;
+  font-size: clamp(48px, 14vw, var(--text-display));
+  line-height: var(--leading-display);
+}
+
+@media (min-width: 1607px) {
+  .text-display {
+    font-size: var(--text-display);
+  }
+}
+
+/* Section Heading (Whisper Weight): 78px Roobert weight 300 */
+.text-heading-whisper {
+  font-family: var(--font-roobert);
+  font-weight: 300;
+  font-size: clamp(32px, 7vw, var(--text-heading));
+  line-height: var(--leading-heading);
+}
+
+/* Ghost Pill Button: static box model only — the hover animation (border
+   opacity + letter-spacing) is driven by Motion's whileHover, not CSS. */
+.ghost-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-buttons);
+  padding: 11px 33px;
+  font-family: var(--font-roobert);
+  font-weight: 400;
+  font-size: 16px;
+  background: transparent;
+  border-width: 1px;
+  border-style: solid;
+  text-decoration: none;
+}
+
+/* Underline-Free Text Link: no underline, ever, and it always inherits its
+   color from context (nav/footer) rather than the browser's default link
+   blue. The hover opacity fade is Motion's whileHover, not a CSS transition. */
+.text-link {
+  text-decoration: none;
+  color: inherit;
+}
