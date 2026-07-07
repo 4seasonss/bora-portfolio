@@ -32,6 +32,3 @@ venv/
 # Local docs — keep private
 CLAUDE.md
 DESIGN.md
-
-# Resume — personal, not for the repo
-public/resume.pdf
