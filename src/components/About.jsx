@@ -15,7 +15,7 @@ function About() {
       viewport={{ once: true, amount: 0.2 }}
       transition={{ duration: 0.9, ease: EASE }}
     >
-      <h2 className="text-heading-whisper m-0 text-obsidian">Student. Developer.</h2>
+      <h2 className="text-heading-whisper m-0 text-obsidian">Student and Software Engineer.</h2>
       <div className="mt-10 flex gap-6">
         <GhostPillButton href="/resume.pdf" target="_blank" rel="noopener noreferrer">
           Résumé

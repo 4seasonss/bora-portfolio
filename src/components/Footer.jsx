@@ -15,7 +15,7 @@ function Footer() {
       transition={{ duration: 0.9, ease: EASE }}
     >
       <p className="font-roobert m-0 text-[11px] leading-[1.36] text-obsidian">Bora Uner</p>
-      <p className="font-roobert mt-2 text-[11px] leading-[1.36] text-felt-gray">Student Developer</p>
+      <p className="font-roobert mt-2 text-[11px] leading-[1.36] text-felt-gray">Student and Software Engineer</p>
 
       <div className="mt-6 flex gap-6">
         <TextLink href="/resume.pdf" target="_blank" rel="noopener noreferrer" className="text-xs text-obsidian">

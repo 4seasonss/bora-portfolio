@@ -319,14 +319,58 @@ function IridescentScene() {
       depthWrite: false,
     })
     const background = new THREE.Mesh(backgroundGeometry, backgroundMaterial)
+    // Draw the backdrop *after* the reflector: the reflector writes depth
+    // first, so the depth test discards the backdrop's (expensive) noise
+    // shader wherever the sphere already covers it. Three.js happens to
+    // tie-break to this order already (equal view depth → creation order);
+    // pinning it here keeps that from silently flipping.
+    background.renderOrder = 1
     scene.add(background)
+
+    let frameId = 0
+    let running = false
+    let frame = 0
+    // Scene time only advances while we're actually rendering (driven by the
+    // rAF timestamp, not a free-running timer), so pausing off-screen
+    // doesn't make the flow jump on return.
+    let time = 0
+    let last = 0
+    // Adaptive resolution: the flow is soft-focus, so pixel count is the
+    // cheapest thing to trade when a GPU can't keep up (fill-rate is the
+    // whole cost of this scene). Starts at the display's ratio and only
+    // ever steps *down* — vsync caps the frame rate, so "fast enough" can't
+    // be told apart from "has headroom", which makes stepping up unreliable.
+    const MAX_RATIO = Math.min(window.devicePixelRatio, 1.5)
+    const MIN_RATIO = 0.6
+    let ratio = MAX_RATIO
+    let sampleFrames = 0
+    let sampleTime = 0
+    const render = () => {
+      sphereMaterial.uniforms.uTime.value = time
+      backgroundMaterial.uniforms.uTime.value = time
+      if (!reducedMotion) {
+        sphere.rotation.y = time * 0.13
+        sphere.rotation.x = Math.sin(time * 0.08) * 0.1
+      }
+      // The reflection moves slowly and is soft by design, so refreshing it
+      // every other frame is invisible — and halves the 6-pass capture cost.
+      if (frame++ % 2 === 0) {
+        sphere.visible = false
+        cubeCamera.update(renderer, scene)
+        sphere.visible = true
+      }
+      renderer.render(scene, camera)
+    }
 
     const setSize = () => {
       const { clientWidth, clientHeight } = container
       renderer.setSize(clientWidth, clientHeight)
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
+      renderer.setPixelRatio(ratio)
       camera.aspect = clientWidth / clientHeight
       camera.updateProjectionMatrix()
+      // Resizing clears the canvas; when no loop is running (reduced motion,
+      // or paused off-screen) nothing would redraw it.
+      if (!running) render()
     }
 
     setSize()
@@ -335,27 +379,54 @@ function IridescentScene() {
     const resizeObserver = new ResizeObserver(setSize)
     resizeObserver.observe(container)
 
-    let frameId
-    const clock = new THREE.Clock()
-
-    const renderFrame = () => {
-      const elapsed = clock.getElapsedTime()
-      sphereMaterial.uniforms.uTime.value = elapsed
-      backgroundMaterial.uniforms.uTime.value = elapsed
-      if (!reducedMotion) {
-        sphere.rotation.y = elapsed * 0.13
-        sphere.rotation.x = Math.sin(elapsed * 0.08) * 0.1
+    const adapt = (delta) => {
+      // Skip warm-up (shader compilation) and multi-second gaps (tab switch).
+      if (frame < 10 || delta > 1.5 || ratio <= MIN_RATIO) return
+      sampleTime += delta
+      sampleFrames++
+      if (sampleFrames < 30) return
+      const avgMs = (sampleTime / sampleFrames) * 1000
+      sampleFrames = 0
+      sampleTime = 0
+      if (avgMs > 25) {
+        // Cost tracks pixel count (∝ ratio²), so aim straight at ~22ms
+        // instead of creeping down in fixed steps — a badly overloaded GPU
+        // shouldn't have to sit through half a dozen stuttery windows.
+        const factor = Math.min(0.9, Math.max(0.6, Math.sqrt(22 / avgMs)))
+        ratio = Math.max(MIN_RATIO, ratio * factor)
+        setSize()
       }
-      sphere.visible = false
-      cubeCamera.update(renderer, scene)
-      sphere.visible = true
-      renderer.render(scene, camera)
-      if (!reducedMotion) frameId = requestAnimationFrame(renderFrame)
     }
-    renderFrame()
+
+    const loop = (now) => {
+      const delta = Math.max(0, (now - last) / 1000)
+      last = now
+      // Clamped so a tab switch or GC pause can't teleport the flow forward.
+      time += Math.min(delta, 0.1)
+      render()
+      adapt(delta)
+      if (running) frameId = requestAnimationFrame(loop)
+    }
+    const start = () => {
+      if (running || reducedMotion) return
+      running = true
+      last = performance.now()
+      frameId = requestAnimationFrame(loop)
+    }
+    const stop = () => {
+      running = false
+      cancelAnimationFrame(frameId)
+    }
+
+    // The scene is a full-viewport WebGL pass — don't burn the GPU on it
+    // while the hero is scrolled out of view (About/Footer, which is most of
+    // the page's lifetime).
+    const visibility = new IntersectionObserver(([entry]) => (entry.isIntersecting ? start() : stop()))
+    visibility.observe(container)
 
     return () => {
-      if (frameId) cancelAnimationFrame(frameId)
+      stop()
+      visibility.disconnect()
       resizeObserver.disconnect()
       sphereGeometry.dispose()
       sphereMaterial.dispose()
@@ -363,6 +434,9 @@ function IridescentScene() {
       backgroundMaterial.dispose()
       cubeRenderTarget.dispose()
       renderer.dispose()
+      // Release the GL context now rather than waiting on GC — browsers cap
+      // live contexts, and StrictMode/HMR remounts would otherwise pile them up.
+      renderer.forceContextLoss()
       container.removeChild(renderer.domElement)
     }
   }, [reducedMotion])

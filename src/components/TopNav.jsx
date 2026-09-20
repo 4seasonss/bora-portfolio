@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, useScroll, useMotionValueEvent } from 'motion/react'
 import TextLink from './TextLink'
 
@@ -8,13 +8,26 @@ import TextLink from './TextLink'
 // scroll-linked) once the page has scrolled past the hero.
 function TopNav() {
   const lastPastRef = useRef(false)
+  const heroHeightRef = useRef(Infinity)
   const [color, setColor] = useState('#ffffff')
   const { scrollY } = useScroll()
 
-  useMotionValueEvent(scrollY, 'change', () => {
+  // The hero is the first thing on the page (this bar is fixed, so it takes
+  // no space), so "scrolled past" is just scrollY vs. the hero's height.
+  // Caching the height keeps layout reads out of the scroll handler —
+  // getBoundingClientRect() there forces a synchronous layout every tick.
+  useEffect(() => {
     const hero = document.getElementById('hero')
-    if (!hero) return
-    const isPast = hero.getBoundingClientRect().bottom <= 66
+    if (!hero) return undefined
+    const observer = new ResizeObserver(() => {
+      heroHeightRef.current = hero.offsetHeight
+    })
+    observer.observe(hero)
+    return () => observer.disconnect()
+  }, [])
+
+  useMotionValueEvent(scrollY, 'change', (y) => {
+    const isPast = y >= heroHeightRef.current - 66
     if (isPast !== lastPastRef.current) {
       lastPastRef.current = isPast
       setColor(isPast ? '#000000' : '#ffffff')
